@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#6d1421" />
+  <meta name="description" content="You're invited to the wedding of Taspia Yasmin & Surayez Rahman" />
+  <title>Taspia Yasmin &amp; Surayez Rahman — You're Invited</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Great+Vibes&family=Jost:wght@300;400;500&family=Amiri&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body
+  data-date-iso="2026-11-20T19:00:00"
+  data-bride="Taspia Yasmin"
+  data-groom="Surayez Rahman"
+  data-date-display="20 November 2026"
+>
+
+  <!-- Scroll progress bar -->
+  <div class="progress" aria-hidden="true"><span class="progress__fill"></span></div>
+
+  <!-- Ambient floating petals rendered on a canvas across the whole page -->
+  <canvas id="petals" class="petals" aria-hidden="true"></canvas>
+
+  <!-- ===================================================================
+       SECTION 1 — CURTAIN REVEAL
+  ==================================================================== -->
+  <section class="stage" id="stage">
+    <div class="curtain curtain--left" aria-hidden="true"></div>
+    <div class="curtain curtain--right" aria-hidden="true"></div>
+
+    <div class="stage__inner reveal-scope">
+      <p class="eyebrow" data-reveal>Together with their families</p>
+      <h1 class="names" data-reveal>
+        <span class="names__first">Taspia Yasmin</span>
+        <span class="names__amp">&amp;</span>
+        <span class="names__second">Surayez Rahman</span>
+      </h1>
+      <p class="tagline" data-reveal>are getting married</p>
+      <div class="scroll-hint" data-reveal>
+        <span>scroll to open</span>
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.4">
+          <path d="M12 4v14M6 12l6 6 6-6" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       SECTION 2 — INVITATION CARD (mirrors the printed invite)
+  ==================================================================== -->
+  <section class="panel panel--invite">
+    <div class="card ornate reveal-scope" data-reveal>
+      <p class="bismillah" lang="ar" dir="rtl" data-reveal>بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيمِ</p>
+      <p class="card__body blessing" data-reveal>With the blessing of Allah Subhanahu Wa-ta’ala, we request the honour of your gracious presence at the wedding ceremony of</p>
+
+      <p class="name-script" data-reveal>Taspia Yasmin</p>
+      <p class="parents" data-reveal>Beloved Youngest Daughter of
+Mohammed Nasir Uddin Chowdhury &amp; Jesmin Aktar Moni</p>
+
+      <p class="with" data-reveal>with</p>
+
+      <p class="name-script" data-reveal>Surayez Rahman</p>
+      <p class="parents" data-reveal>Beloved Only Son of
+Lt Col Md Shahidur Rahman (Retd) &amp; Khaleda Shahid Jharna</p>
+
+      <p class="card__hashtag" data-reveal>#TaspiaAndSurayez</p>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       SECTION 3 — SCRATCH TO REVEAL THE DATE
+  ==================================================================== -->
+  <section class="panel panel--scratch">
+    <div class="reveal-scope">
+      <p class="eyebrow" data-reveal>Save the date</p>
+      <h2 class="section-title" data-reveal>Scratch to reveal</h2>
+
+      <div class="scratch" data-reveal>
+        <div class="scratch__prize">
+          <span class="scratch__day">Friday</span>
+          <span class="scratch__date">20 November 2026</span>
+          <span class="scratch__time">7:00 in the evening</span>
+        </div>
+        <canvas class="scratch__canvas" id="scratchCanvas"></canvas>
+        <span class="scratch__hint">✦ use your finger ✦</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       SECTION 4 — COUNTDOWN
+  ==================================================================== -->
+  <section class="panel panel--countdown">
+    <div class="reveal-scope">
+      <p class="eyebrow" data-reveal>Counting down to forever</p>
+      <div class="countdown" id="countdown" data-reveal>
+        <div class="count"><span class="count__num" data-unit="days">--</span><span class="count__label">Days</span></div>
+        <div class="count"><span class="count__num" data-unit="hours">--</span><span class="count__label">Hours</span></div>
+        <div class="count"><span class="count__num" data-unit="minutes">--</span><span class="count__label">Minutes</span></div>
+        <div class="count"><span class="count__num" data-unit="seconds">--</span><span class="count__label">Seconds</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       SECTION 5 — OUR STORY
+  ==================================================================== -->
+  <section class="panel panel--story">
+    <div class="reveal-scope">
+      <span class="card__flourish" data-reveal>&#10047;</span>
+      <h2 class="section-title" data-reveal>A Blessed Union</h2>
+      <p class="story" data-reveal>With hearts full of gratitude and joy, two families come together to celebrate a union blessed by Allah. We would be honoured to have you share in this cherished beginning of our forever.</p>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       SECTION 6 — SCHEDULE / TIMELINE
+  ==================================================================== -->
+  <section class="panel panel--schedule">
+    <div class="reveal-scope">
+      <p class="eyebrow" data-reveal>The evening</p>
+      <h2 class="section-title" data-reveal>Order of events</h2>
+      <ol class="timeline">
+        <li class="timeline__item" data-reveal>
+          <span class="timeline__time">6:30 PM</span>
+          <span class="timeline__dot" aria-hidden="true"></span>
+          <div class="timeline__content">
+            <h3 class="timeline__title">Guest Arrival</h3>
+            <p class="timeline__detail">Welcome &amp; seating</p>
+          </div>
+        </li>
+        <li class="timeline__item" data-reveal>
+          <span class="timeline__time">7:00 PM</span>
+          <span class="timeline__dot" aria-hidden="true"></span>
+          <div class="timeline__content">
+            <h3 class="timeline__title">The Ceremony</h3>
+            <p class="timeline__detail">Navy Convention Centre</p>
+          </div>
+        </li>
+        <li class="timeline__item" data-reveal>
+          <span class="timeline__time">8:00 PM</span>
+          <span class="timeline__dot" aria-hidden="true"></span>
+          <div class="timeline__content">
+            <h3 class="timeline__title">Dinner</h3>
+            <p class="timeline__detail">Grand Hall</p>
+          </div>
+        </li>
+        <li class="timeline__item" data-reveal>
+          <span class="timeline__time">9:00 PM</span>
+          <span class="timeline__dot" aria-hidden="true"></span>
+          <div class="timeline__content">
+            <h3 class="timeline__title">Celebration</h3>
+            <p class="timeline__detail">An evening of blessings</p>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       SECTION 7 — VENUE
+  ==================================================================== -->
+  <section class="panel panel--venue">
+    <div class="reveal-scope">
+      <p class="eyebrow" data-reveal>Where</p>
+      <h2 class="section-title" data-reveal>Navy Convention Centre</h2>
+      <p class="venue__address" data-reveal>Tigerpass Circle, Chattogram</p>
+      <a class="btn btn--ghost" href="https://maps.google.com/?q=Navy+Convention+Centre+Tigerpass+Chattogram" target="_blank" rel="noopener" data-reveal>Open in Maps</a>
+      <p class="dress-code" data-reveal>Women: Elegant Traditional Wear · Men: Bandhgala / Traditional Attire</p>
+      <p class="dress-note" data-reveal>Kindly avoid wearing red, so we can keep our photos beautifully coordinated.</p>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       FOOTER
+  ==================================================================== -->
+  <footer class="footer">
+    <p class="script footer__names">Taspia Yasmin &amp; Surayez Rahman</p>
+    <p class="footer__meta">20 November 2026 &middot; Navy Convention Centre</p>
+    <p class="footer__hashtag">#TaspiaAndSurayez</p>
+  </footer>
+
+  <script src="js/main.js" defer></script>
+</body>
+</html>
