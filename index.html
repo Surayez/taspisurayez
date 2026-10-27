@@ -1067,13 +1067,18 @@
       height: calc(58% + 42% * var(--p));
       /* oversized radii are scaled down to a true semicircle; they shrink to 0 at --p 1 */
       border-radius: calc((1 - var(--p)) * 600px) calc((1 - var(--p)) * 600px) 0 0;
-      background: var(--lattice), var(--door); /* same lattice as the chapters, so the open door reads as their floor */
+      /* a soft shade under the crown, then the same lattice as the chapters, so the
+         open door reads as their floor. (The shade is a gradient, not a blurred inset
+         shadow: the door is repainted on every scroll frame and a blur is costly there.) */
+      background:
+        linear-gradient(rgba(var(--shade), calc(0.13 * (1 - var(--p)))), rgba(var(--shade), 0) 70px),
+        var(--lattice),
+        var(--door);
       /* double gold moulding round the arch, fading as the door opens */
       box-shadow:
         0 0 0 1.5px rgba(var(--line), calc(1 - var(--p))),
         0 0 0 9px var(--wall),
-        0 0 0 10px rgba(var(--line), calc(0.6 * (1 - var(--p)))),
-        inset 0 18px 40px rgba(var(--shade), calc(0.16 * (1 - var(--p))));
+        0 0 0 10px rgba(var(--line), calc(0.6 * (1 - var(--p))));
     }
 
     /* keystone at the crown of the arch */
@@ -1115,13 +1120,14 @@
     /* Moving version: the line rides inside the doorway just under its crown, then
        holds mid-screen (sticky, so it's steady) while the door finishes opening, and
        leaves only when the next chapter scrolls up and pushes it on. JS sets the hold
-       line (top) and --ny, how far below that it still has to ride with the arch. */
+       line (top) and the line's depth under the crown (margin-top). The depth is part
+       of the layout, never a transform, so only sticky decides when the line holds:
+       the browser applies that in step with the scroll even when scripts are slowed
+       (e.g. Low Power Mode), so the line can't shake against the page. */
     .seam.is-riding .seam__note {
       position: sticky;
       color: var(--door-ink);
       text-shadow: none;
-      transform: translate3d(0, var(--ny, 0px), 0);
-      will-change: transform;
     }
 
     /* ============================================================
@@ -1824,9 +1830,15 @@
       // as far as it needs to clear the curve. Once it reaches the hold line (a little
       // above mid-screen) CSS sticky takes over, so it sits perfectly still while the
       // door finishes opening, and the next chapter pushes it off when it arrives.
+      //
+      // Phones scroll on their own thread, and in Low Power Mode they run this script at
+      // half the frame rate of the scroll. So nothing here may move against the scroll:
+      // the script only sets the door's shape and how deep the line sits inside it, both
+      // of which travel with the page, and sticky alone does the holding still.
       var seams = Array.prototype.slice.call(document.querySelectorAll('.seam'));
       var notes = seams.map(function (seam) { return seam.querySelector('.seam__note'); });
       var noteW = [], holdTop = [];
+      var lastP = [], lastRide = []; // what was last written, so unchanged seams cost nothing
       var seamTick = false;
 
       function measureNotes() {
@@ -1854,11 +1866,12 @@
           var depth = half <= 0 ? 0 : half >= rad ? rad : rad - Math.sqrt(rad * rad - half * half);
           var ride = crown + Math.max(28, depth + 10);
 
-          // Sticky already holds the line at holdTop once the seam's top passes it,
-          // so only shift it by however much further down the arch still is
-          var held = Math.max(0, holdTop[i] - r.top);
-          seam.style.setProperty('--p', p.toFixed(3));
-          seam.style.setProperty('--ny', Math.max(0, ride - held).toFixed(1) + 'px');
+          // The line sits `ride` below the seam's top in the layout; sticky then keeps it
+          // from rising above the hold line, so on screen it's at whichever is lower
+          var pStr = p.toFixed(3);
+          var rideStr = ride.toFixed(1) + 'px';
+          if (pStr !== lastP[i]) { seam.style.setProperty('--p', pStr); lastP[i] = pStr; }
+          if (rideStr !== lastRide[i]) { notes[i].style.marginTop = rideStr; lastRide[i] = rideStr; }
         });
         seamTick = false;
       }
