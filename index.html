@@ -630,6 +630,9 @@
       outline-offset: 3px;
     }
 
+    /* A chapter takes focus when a link brings you to it; no ring around the whole chapter */
+    .chapter:focus { outline: none; }
+
     .events__dot {
       position: relative;
       flex: none;
@@ -1948,7 +1951,8 @@
       // land under the fixed nav. Only on devices with a mouse or trackpad: on phones
       // its touch listeners would make every swipe wait for the page's scripts (slow in
       // in-app browsers), and phones keep their native momentum scroll anyway. There the
-      // in-page links glide with the browser's own smooth scrolling (scroll-behavior).
+      // in-page links glide with the browser's own smooth scrolling (see the link handler
+      // in the main script, which also keeps the #hash out of the address).
       var finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
       if (window.Lenis && finePointer) {
         var lenis = new Lenis({ duration: 1.2, anchors: true, autoRaf: true });
@@ -2129,6 +2133,29 @@
         };
         envelope.addEventListener('click', open);
       }
+
+      // In-page links (the opening's event list, the nav, the scroll cue, the summary
+      // timeline) scroll to their chapter without changing the address. Some in-app
+      // browsers (Messenger, WhatsApp) treat a new #hash as a fresh page load, which
+      // reloaded the site straight back to the sealed envelope.
+      document.addEventListener('click', function (e) {
+        if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        var link = e.target.closest ? e.target.closest('a[href^="#"]') : null;
+        if (!link) return;
+        var target = document.getElementById(decodeURIComponent(link.getAttribute('href').slice(1)));
+        if (!target) return;
+        e.preventDefault();
+
+        // Carry keyboard and screen reader position along, as following the link would
+        if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+        target.focus({ preventScroll: true });
+
+        // On a mouse or trackpad Lenis hears the same click and glides there itself;
+        // elsewhere the browser scrolls (smoothly, unless reduced motion is on), landing
+        // the chapter heading under the nav via its scroll-margin-top
+        if (document.documentElement.classList.contains('lenis')) return;
+        target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+      });
 
       // Fade content in as it scrolls into view
       if (hasIO && !reduceMotion) {
