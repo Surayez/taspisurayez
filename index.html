@@ -12,8 +12,13 @@
   <link href="https://fonts.googleapis.com/css2?family=Amiri&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&family=Great+Vibes&display=swap" rel="stylesheet">
 
   <!-- Flag JS early so motion styles only hide content when they can also show it,
-       and lock scrolling behind the sealed envelope before first paint -->
-  <script>document.documentElement.classList.add('js', 'is-sealed');</script>
+       and lock scrolling behind the sealed envelope before first paint. Every visit
+       starts at the envelope, so don't let the browser restore the old scroll position
+       on reload (in-app browsers such as Messenger's otherwise put it back behind the envelope). -->
+  <script>
+    document.documentElement.classList.add('js', 'is-sealed');
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  </script>
 
   <style>
     /* ============================================================
@@ -57,7 +62,7 @@
 
     html {
       -webkit-text-size-adjust: 100%;
-      scroll-behavior: smooth; /* fallback if Lenis doesn't load */
+      scroll-behavior: smooth; /* in-page links glide on phones, and wherever Lenis isn't running */
     }
 
     /* Lenis inertial smooth scroll (the minimal rules from lenis.css) */
@@ -168,8 +173,9 @@
       --t0: 2.5s; /* when the opening starts cascading in, measured from the tap */
     }
 
+    /* (instant scrolling while sealed, so pulling the page back to the top is never animated) */
     html.is-sealed,
-    html.is-sealed body { overflow: hidden; height: 100%; }
+    html.is-sealed body { overflow: hidden; height: 100%; scroll-behavior: auto; }
 
     .envelope {
       position: fixed;
@@ -783,6 +789,13 @@
                   background-color 0.6s ease, color 0.6s ease, border-color 0.6s ease;
     }
 
+    /* Never over the sealed envelope, whatever the page behind it is doing */
+    html.is-sealed .nav {
+      transform: translate(-50%, -100%);
+      visibility: hidden;
+      transition: none;
+    }
+
     body[data-active="wedding"] .nav {
       color: var(--wedding-ink);
       background: rgba(74, 15, 22, 0.86);
@@ -1010,24 +1023,40 @@
        Seams: a doorway into the next celebration
        Between chapters an arch in the next event's colour stands on the
        floor of the one you're leaving. As you scroll through, it widens
-       and rises until its curve flattens out and it becomes the next
-       chapter's ground. JS drives --p from 0 to 1; without JS (or with
-       reduced motion) it stays a still, open doorway.
+       and rises until its curve sweeps out past the edges and it becomes
+       the next chapter's ground. Without JS (or with reduced motion) it
+       stays a still, open doorway.
+
+       Everything that moves here moves only by translate, scale and
+       opacity, tied straight to the scroll (a scroll-driven animation).
+       The browser can run that alongside the scroll itself, without the
+       page's scripts, so the doorway keeps pace even when scripts are
+       slowed: Low Power Mode, in-app browsers (Messenger, WhatsApp,
+       Instagram) and older phones.
        ============================================================ */
     .seam {
-      --p: 0;
       position: relative;
       height: 62vh;
       height: 62svh;
       min-height: 340px;
       max-height: 560px;
-      display: flex;
-      align-items: flex-end;
-      justify-content: center;
+      /* overlap the next chapter by a pixel, so no hairline of the page can show between them */
+      margin-bottom: -1px;
       overflow: hidden;
       overflow: clip;
-      background: var(--lattice), var(--wall);
+      /* lets the doorway's motion be measured in the seam's own width (cqw) and height (cqh) */
+      container-type: size;
+      background: var(--wall);
       color: var(--note-ink);
+    }
+
+    /* The lattice sits over the wall and the doorway alike, so it stays put while the door moves */
+    .seam::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: var(--lattice);
+      pointer-events: none;
     }
 
     /* --wall: the chapter you're leaving · --door: the one you're entering · --line: gold (r, g, b) */
@@ -1061,37 +1090,44 @@
       --door-ink: var(--walima-ink);
     }
 
+    /* The arch, drawn once and only ever moved and scaled. It stands with its crown 42% down
+       the seam and reaches a little below the seam's foot (clipped there), so its own lower
+       edge and moulding can never show as a line where the seam meets the next chapter.
+       It grows about its crown, so the curve stays a true semicircle. */
     .seam__door {
-      position: relative;
-      width: calc(38% + 62% * var(--p));
-      height: calc(58% + 42% * var(--p));
-      /* oversized radii are scaled down to a true semicircle; they shrink to 0 at --p 1 */
-      border-radius: calc((1 - var(--p)) * 600px) calc((1 - var(--p)) * 600px) 0 0;
-      /* a soft shade under the crown, then the same lattice as the chapters, so the
-         open door reads as their floor. (The shade is a gradient, not a blurred inset
-         shadow: the door is repainted on every scroll frame and a blur is costly there.) */
-      background:
-        linear-gradient(rgba(var(--shade), calc(0.13 * (1 - var(--p)))), rgba(var(--shade), 0) 70px),
-        var(--lattice),
-        var(--door);
-      /* double gold moulding round the arch, fading as the door opens */
-      box-shadow:
-        0 0 0 1.5px rgba(var(--line), calc(1 - var(--p))),
-        0 0 0 9px var(--wall),
-        0 0 0 10px rgba(var(--line), calc(0.6 * (1 - var(--p))));
+      position: absolute;
+      top: 42%;
+      left: 31%;
+      width: 38%;
+      height: 62%;
+      border-radius: 9999px 9999px 0 0; /* scaled down by the browser to a true semicircle */
+      background: var(--door);
+      transform-origin: 50% 0;
     }
 
-    /* keystone at the crown of the arch */
-    .seam__door::before {
+    /* the soft shade under the crown and the double gold moulding round the arch,
+       which fade away as the door opens */
+    .seam__door::after {
       content: "";
       position: absolute;
-      top: -17px;
-      left: 50%;
+      inset: 0;
+      border-radius: inherit;
+      background: linear-gradient(rgba(var(--shade), 0.13), rgba(var(--shade), 0) 70px);
+      box-shadow:
+        0 0 0 1.5px rgb(var(--line)),
+        0 0 0 9px var(--wall),
+        0 0 0 10px rgba(var(--line), 0.6);
+    }
+
+    /* keystone at the crown of the arch: it rises with the crown but doesn't grow */
+    .seam__key {
+      position: absolute;
+      top: calc(42% - 17px);
+      left: calc(50% - 6px);
       width: 12px;
       height: 12px;
       background: rgb(var(--line));
-      transform: translateX(-50%) rotate(45deg);
-      opacity: calc(1 - var(--p) * 1.6);
+      rotate: 45deg;
     }
 
     /* A line of story between two celebrations. The rail spans the seam (stopping
@@ -1117,18 +1153,111 @@
       color: var(--note-ink);
     }
 
-    /* Moving version: the line rides inside the doorway just under its crown, then
-       holds mid-screen (sticky, so it's steady) while the door finishes opening, and
-       leaves only when the next chapter scrolls up and pushes it on. JS sets the hold
-       line (top) and the line's depth under the crown (margin-top). The depth is part
-       of the layout, never a transform, so only sticky decides when the line holds:
-       the browser applies that in step with the scroll even when scripts are slowed
-       (e.g. Low Power Mode), so the line can't shake against the page. */
+    /* Moving version: the line fades in inside the doorway once it's wide enough, rises
+       with the page to a little above mid-screen, holds there (sticky) while the door
+       finishes opening, and leaves when the next chapter scrolls up and pushes it on.
+       Nothing but sticky ever moves it, so it can't shake against the page. */
     .seam.is-riding .seam__note {
       position: sticky;
+      top: calc(42vh - 0.75em); /* its middle on the hold line, 42% down the screen */
+      margin-top: 40cqh;
       color: var(--door-ink);
       text-shadow: none;
     }
+
+    /* The doorway's motion. Each keyframe is a step along the scroll; between them the
+       door widens and rises, eased in and out. Ends with the arch 3.6× its size and its
+       crown above the seam, so its curve has swept clear of both top corners. */
+    @keyframes seam-door {
+      0%   { translate: 0 0; scale: 1; }
+      5%   { translate: 0 -0.305cqh; scale: 1.012; }
+      10%  { translate: 0 calc(-1.176cqh - 0.001cqw); scale: 1.046; }
+      15%  { translate: 0 calc(-2.551cqh - 0.005cqw - 0.001px); scale: 1.099; }
+      20%  { translate: 0 calc(-4.368cqh - 0.026cqw - 0.007px); scale: 1.171; }
+      25%  { translate: 0 calc(-6.562cqh - 0.088cqw - 0.023px); scale: 1.258; }
+      30%  { translate: 0 calc(-9.072cqh - 0.232cqw - 0.06px); scale: 1.362; }
+      35%  { translate: 0 calc(-11.833cqh - 0.514cqw - 0.134px); scale: 1.481; }
+      40%  { translate: 0 calc(-14.784cqh - 1.003cqw - 0.262px); scale: 1.616; }
+      45%  { translate: 0 calc(-17.861cqh - 1.769cqw - 0.461px); scale: 1.768; }
+      50%  { translate: 0 calc(-21cqh - 2.875cqw - 0.75px); scale: 1.936; }
+      55%  { translate: 0 calc(-24.14cqh - 4.367cqw - 1.139px); scale: 2.121; }
+      60%  { translate: 0 calc(-27.216cqh - 6.258cqw - 1.633px); scale: 2.32; }
+      65%  { translate: 0 calc(-30.167cqh - 8.522cqw - 2.223px); scale: 2.53; }
+      70%  { translate: 0 calc(-32.928cqh - 11.083cqw - 2.891px); scale: 2.745; }
+      75%  { translate: 0 calc(-35.438cqh - 13.816cqw - 3.604px); scale: 2.958; }
+      80%  { translate: 0 calc(-37.632cqh - 16.544cqw - 4.316px); scale: 3.158; }
+      85%  { translate: 0 calc(-39.448cqh - 19.058cqw - 4.972px); scale: 3.335; }
+      90%  { translate: 0 calc(-40.824cqh - 21.122cqw - 5.51px); scale: 3.475; }
+      95%  { translate: 0 calc(-41.696cqh - 22.503cqw - 5.87px); scale: 3.567; }
+      100% { translate: 0 calc(-42cqh - 23cqw - 6px); scale: 3.6; }
+    }
+
+    /* the keystone follows the crown (same rise, no growth) and fades with the moulding */
+    @keyframes seam-key {
+      0%   { translate: 0 0; opacity: 1; }
+      5%   { translate: 0 -0.305cqh; opacity: 0.988; }
+      10%  { translate: 0 calc(-1.176cqh - 0.001cqw); opacity: 0.955; }
+      15%  { translate: 0 calc(-2.551cqh - 0.005cqw - 0.001px); opacity: 0.903; }
+      20%  { translate: 0 calc(-4.368cqh - 0.026cqw - 0.007px); opacity: 0.834; }
+      25%  { translate: 0 calc(-6.562cqh - 0.088cqw - 0.023px); opacity: 0.75; }
+      30%  { translate: 0 calc(-9.072cqh - 0.232cqw - 0.06px); opacity: 0.654; }
+      35%  { translate: 0 calc(-11.833cqh - 0.514cqw - 0.134px); opacity: 0.549; }
+      40%  { translate: 0 calc(-14.784cqh - 1.003cqw - 0.262px); opacity: 0.437; }
+      45%  { translate: 0 calc(-17.861cqh - 1.769cqw - 0.461px); opacity: 0.32; }
+      50%  { translate: 0 calc(-21cqh - 2.875cqw - 0.75px); opacity: 0.2; }
+      55%  { translate: 0 calc(-24.14cqh - 4.367cqw - 1.139px); opacity: 0.08; }
+      60%, 100% { translate: 0 calc(-27.216cqh - 6.258cqw - 1.633px); opacity: 0; }
+    }
+
+    @keyframes seam-frame {
+      0%   { opacity: 1; }
+      5%   { opacity: 0.988; }
+      10%  { opacity: 0.955; }
+      15%  { opacity: 0.903; }
+      20%  { opacity: 0.834; }
+      25%  { opacity: 0.75; }
+      30%  { opacity: 0.654; }
+      35%  { opacity: 0.549; }
+      40%  { opacity: 0.437; }
+      45%  { opacity: 0.32; }
+      50%  { opacity: 0.2; }
+      55%  { opacity: 0.08; }
+      60%, 100% { opacity: 0; }
+    }
+
+    /* the line waits until the doorway is wide enough to hold it */
+    @keyframes seam-note {
+      0%, 36% { opacity: 0; }
+      47%, 100% { opacity: 1; }
+    }
+
+    /* Tied to the scroll: the doorway opens over the seam's first 63% of its passage
+       across the screen (from its top entering at the bottom of the screen to its top
+       reaching the top). */
+    @supports (animation-timeline: view()) {
+      .seam.is-riding { view-timeline: --seam block; }
+      .seam.is-riding .seam__door,
+      .seam.is-riding .seam__door::after,
+      .seam.is-riding .seam__key,
+      .seam.is-riding .seam__note {
+        animation-duration: auto;
+        animation-timing-function: linear;
+        animation-fill-mode: both;
+        animation-timeline: --seam;
+        animation-range: cover 0% cover 63%;
+      }
+      .seam.is-riding .seam__door { animation-name: seam-door; }
+      .seam.is-riding .seam__door::after { animation-name: seam-frame; }
+      .seam.is-riding .seam__key { animation-name: seam-key; }
+      .seam.is-riding .seam__note { animation-name: seam-note; }
+    }
+
+    /* Browsers without scroll-driven animations: the same animations, paused, with a
+       light script setting how far along each one is as the page scrolls */
+    .seam.is-scrubbed .seam__door { animation: seam-door 1s linear both paused; }
+    .seam.is-scrubbed .seam__door::after { animation: seam-frame 1s linear both paused; }
+    .seam.is-scrubbed .seam__key { animation: seam-key 1s linear both paused; }
+    .seam.is-scrubbed .seam__note { animation: seam-note 1s linear both paused; }
 
     /* ============================================================
        Closing: the celebrations at a glance, the WhatsApp community
@@ -1557,7 +1686,8 @@
       .timeline > li:not(:last-child)::before, .timeline__node::after { animation: none; }
       /* closing garden: simply there, in full */
       .finale__bg::before { animation: none; }
-      /* seams: the JS that opens the doors doesn't run, so each stays a still, open doorway */
+      /* seams: never switched on (the script skips them), so each stays a still, open doorway */
+      .seam__door, .seam__door::after, .seam__key, .seam__note { animation: none; }
       /* envelope: still sealed and tappable, but it simply disappears when opened */
       .env, .env__seal::after { animation: none; }
       .envelope__hint, .envelope__kicker { animation: none; opacity: 1; transform: none; }
@@ -1657,6 +1787,7 @@
 
     <div class="seam seam--to-haldi">
       <span class="seam__door" aria-hidden="true"></span>
+      <span class="seam__key" aria-hidden="true"></span>
       <div class="seam__rail"><p class="seam__note">and so it begins…</p></div>
     </div>
 
@@ -1677,6 +1808,7 @@
 
     <div class="seam seam--to-wedding">
       <span class="seam__door" aria-hidden="true"></span>
+      <span class="seam__key" aria-hidden="true"></span>
       <div class="seam__rail"><p class="seam__note">two days later…</p></div>
     </div>
 
@@ -1705,6 +1837,7 @@
 
     <div class="seam seam--to-walima">
       <span class="seam__door" aria-hidden="true"></span>
+      <span class="seam__key" aria-hidden="true"></span>
       <div class="seam__rail"><p class="seam__note">five days later, in Dhaka…</p></div>
     </div>
 
@@ -1812,79 +1945,59 @@
 
       // Lenis eases wheel/trackpad scrolling and the in-page links (nav, scroll cue,
       // summary timeline), honouring each chapter's scroll-margin-top so headings
-      // land under the fixed nav. Phones keep their native momentum scroll.
-      if (window.Lenis) {
+      // land under the fixed nav. Only on devices with a mouse or trackpad: on phones
+      // its touch listeners would make every swipe wait for the page's scripts (slow in
+      // in-app browsers), and phones keep their native momentum scroll anyway. There the
+      // in-page links glide with the browser's own smooth scrolling (scroll-behavior).
+      var finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+      if (window.Lenis && finePointer) {
         var lenis = new Lenis({ duration: 1.2, anchors: true, autoRaf: true });
         // Hold still while the envelope is sealed; the main script announces when it's been opened
         if (document.documentElement.classList.contains('is-sealed')) {
           lenis.stop();
-          document.addEventListener('envelope:open', function () { lenis.start(); }, { once: true });
+          document.addEventListener('envelope:open', function () {
+            // pick up from the top, not from wherever the page was before a reload
+            lenis.scrollTo(0, { immediate: true, force: true });
+            lenis.start();
+          }, { once: true });
         }
       }
 
-      // Doorways: each seam's arch starts opening as it enters at the bottom of the
-      // screen and is fully open (flush with the next chapter) once the seam's lower
-      // edge is 60% of the way down the screen
-      //
-      // Each seam's line of story rides inside the arch just under its crown, sunk only
-      // as far as it needs to clear the curve. Once it reaches the hold line (a little
-      // above mid-screen) CSS sticky takes over, so it sits perfectly still while the
-      // door finishes opening, and the next chapter pushes it off when it arrives.
-      //
-      // Phones scroll on their own thread, and in Low Power Mode they run this script at
-      // half the frame rate of the scroll. So nothing here may move against the scroll:
-      // the script only sets the door's shape and how deep the line sits inside it, both
-      // of which travel with the page, and sticky alone does the holding still.
+      // Doorways: the CSS ties each arch's opening straight to the scroll, so there is
+      // nothing to do here but switch it on. Browsers without scroll-driven animations
+      // (older iPhones and in-app browsers on them) get the same CSS animations paused,
+      // and this sets how far along they are as the page scrolls. Even then nothing
+      // is laid out or repainted: only the doorway's translate, scale and opacity change.
       var seams = Array.prototype.slice.call(document.querySelectorAll('.seam'));
-      var notes = seams.map(function (seam) { return seam.querySelector('.seam__note'); });
-      var noteW = [], holdTop = [];
-      var lastP = [], lastRide = []; // what was last written, so unchanged seams cost nothing
-      var seamTick = false;
-
-      function measureNotes() {
-        var holdLine = window.innerHeight * 0.42;
-        notes.forEach(function (note, i) {
-          noteW[i] = note.offsetWidth;
-          holdTop[i] = Math.round(holdLine - note.offsetHeight / 2);
-          note.style.top = holdTop[i] + 'px';
-        });
-      }
-
-      function openDoors() {
-        var vh = window.innerHeight;
-        var rects = seams.map(function (seam) { return seam.getBoundingClientRect(); }); // read everything, then write
-        seams.forEach(function (seam, i) {
-          var r = rects[i];
-          var t = Math.min(1, Math.max(0, (vh - r.top) / (r.height + vh * 0.4)));
-          var p = Math.round(t * t * (3 - 2 * t) * 1000) / 1000; // ease in-out
-
-          // The door's geometry, mirroring .seam__door's CSS
-          var w = r.width * (0.38 + 0.62 * p);
-          var crown = r.height * 0.42 * (1 - p);        // crown, measured down from the seam's top
-          var rad = Math.min(600 * (1 - p), w / 2);      // corner radius after the browser scales it
-          var half = (noteW[i] + 32 - (w - 2 * rad)) / 2; // how much of each curve the line must clear
-          var depth = half <= 0 ? 0 : half >= rad ? rad : rad - Math.sqrt(rad * rad - half * half);
-          var ride = crown + Math.max(28, depth + 10);
-
-          // The line sits `ride` below the seam's top in the layout; sticky then keeps it
-          // from rising above the hold line, so on screen it's at whichever is lower
-          var pStr = p.toFixed(3);
-          var rideStr = ride.toFixed(1) + 'px';
-          if (pStr !== lastP[i]) { seam.style.setProperty('--p', pStr); lastP[i] = pStr; }
-          if (rideStr !== lastRide[i]) { notes[i].style.marginTop = rideStr; lastRide[i] = rideStr; }
-        });
-        seamTick = false;
-      }
-
       seams.forEach(function (seam) { seam.classList.add('is-riding'); });
-      measureNotes();
-      window.addEventListener('scroll', function () {
-        if (!seamTick) { seamTick = true; requestAnimationFrame(openDoors); }
-      }, { passive: true });
-      window.addEventListener('resize', function () { measureNotes(); openDoors(); });
-      // The script face changes the line's width once it loads
-      if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { measureNotes(); openDoors(); });
-      openDoors();
+
+      if (!(window.CSS && CSS.supports && CSS.supports('animation-timeline: view()')) &&
+          seams.length && seams[0].getAnimations) {
+        seams.forEach(function (seam) { seam.classList.add('is-scrubbed'); });
+        var seamAnims = seams.map(function (seam) { return seam.getAnimations({ subtree: true }); });
+        var seamAt = [];
+        var seamTick = false;
+
+        // Matches the CSS: 0 as the seam's top enters at the foot of the screen, 1 once it
+        // has travelled 63% of the way to its foot leaving the top
+        var scrub = function () {
+          var vh = window.innerHeight;
+          seams.forEach(function (seam, i) {
+            var r = seam.getBoundingClientRect();
+            var t = Math.min(1, Math.max(0, (vh - r.top) / (0.63 * (vh + r.height))));
+            if (t === seamAt[i]) return; // off screen or unchanged: nothing to do
+            seamAt[i] = t;
+            seamAnims[i].forEach(function (anim) { anim.currentTime = t * 1000; });
+          });
+          seamTick = false;
+        };
+
+        window.addEventListener('scroll', function () {
+          if (!seamTick) { seamTick = true; requestAnimationFrame(scrub); }
+        }, { passive: true });
+        window.addEventListener('resize', function () { seamAt = []; scrub(); });
+        scrub();
+      }
 
       // Leaves drifting down the whole page on a fixed canvas
       var canvas = document.querySelector('.leaves');
@@ -1966,7 +2079,21 @@
       // The sealed envelope: hold the page at the top until the guest opens it
       if (envelope) {
         if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
-        window.scrollTo(0, 0);
+
+        // Some in-app browsers (Messenger, Instagram) put the old scroll position back on
+        // reload anyway, and a #link in the address jumps there too. While sealed, html and
+        // body both hide their overflow, which makes the body itself the thing that scrolls,
+        // so check every scroller and pull it straight back to the top. (Scroll events don't
+        // bubble, so listen in the capture phase to hear the body's as well as the window's.)
+        var pinTop = function () {
+          if (window.scrollY !== 0 || window.scrollX !== 0) window.scrollTo(0, 0);
+          if (document.body.scrollTop !== 0) document.body.scrollTop = 0;
+          if (document.documentElement.scrollTop !== 0) document.documentElement.scrollTop = 0;
+        };
+        pinTop();
+        document.addEventListener('scroll', pinTop, { capture: true, passive: true });
+        window.addEventListener('load', pinTop);
+        window.addEventListener('pageshow', pinTop);
 
         // iOS ignores overflow: hidden on the body, so swallow touch scrolling on the overlay too
         var blockTouch = function (e) { e.preventDefault(); };
@@ -1976,6 +2103,9 @@
         var open = function () {
           if (opened) return;
           opened = true;
+          // Start the story from the top, at Haldi, whatever happened behind the envelope
+          pinTop();
+          setActive('haldi');
 
           // Scale the letter (about its centre) so it always covers the viewport as it grows into the page
           var r = envelope.querySelector('.env__letter').getBoundingClientRect();
@@ -1990,6 +2120,8 @@
 
           var done = function () {
             if (envelope.parentNode) envelope.parentNode.removeChild(envelope);
+            pinTop();
+            document.removeEventListener('scroll', pinTop, { capture: true });
             document.documentElement.classList.remove('is-sealed');
             document.dispatchEvent(new CustomEvent('envelope:open')); // lets smooth scroll resume
           };
@@ -2038,26 +2170,29 @@
         nav.classList.toggle('is-shown', entries[0].intersectionRatio < 0.2);
       }, { threshold: 0.2 }).observe(hero);
 
-      // Track which event is on screen: themes the nav and the browser bar
-      var links = nav.querySelectorAll('a');
-      var themeMeta = document.querySelector('meta[name="theme-color"]');
-      var themeColors = { haldi: '#f7f1ea', wedding: '#5a141c', walima: '#f2f3ec' };
-
+      // Track which event is on screen: themes the nav and the browser bar.
+      // Ignored while sealed: anything the page does behind the envelope isn't the guest's place.
       var chapterObserver = new IntersectionObserver(function (entries) {
+        if (document.documentElement.classList.contains('is-sealed')) return;
         entries.forEach(function (entry) {
-          if (!entry.isIntersecting) return;
-          var id = entry.target.getAttribute('data-chapter');
-          document.body.setAttribute('data-active', id);
-          themeMeta.setAttribute('content', themeColors[id]);
-          links.forEach(function (link) {
-            link.setAttribute('aria-current', link.hash === '#' + id ? 'true' : 'false');
-          });
+          if (entry.isIntersecting) setActive(entry.target.getAttribute('data-chapter'));
         });
       }, { rootMargin: '-45% 0px -55% 0px' });
 
       document.querySelectorAll('.chapter').forEach(function (chapter) {
         chapterObserver.observe(chapter);
       });
+
+      // Mark an event as the one on screen: the nav's colours and underline, and the browser bar
+      function setActive(id) {
+        var themeColors = { haldi: '#f7f1ea', wedding: '#5a141c', walima: '#f2f3ec' };
+        var themeMeta = document.querySelector('meta[name="theme-color"]');
+        document.body.setAttribute('data-active', id);
+        if (themeMeta) themeMeta.setAttribute('content', themeColors[id]);
+        nav.querySelectorAll('a').forEach(function (link) {
+          link.setAttribute('aria-current', link.hash === '#' + id ? 'true' : 'false');
+        });
+      }
     })();
   </script>
 </body>
